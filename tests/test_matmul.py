@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from triton_kernels.kernels.matmul import matmul_f32, matmul_i8
+from triton_kernels.kernels.matmul import matmul_bf16, matmul_f16, matmul_f32, matmul_i8
 
 
 @pytest.mark.parametrize(
@@ -48,3 +48,37 @@ def test_matmul_f32(M, K, N):
     assert torch.allclose(
         out_triton, out_ref, rtol=0, atol=5e-2
     ), f"Triton output doesn't match reference output:\n{out_triton}\n{out_ref}"
+
+
+@pytest.mark.parametrize(
+    "M, K, N",
+    [
+        (16, 16, 16),
+        (32, 16, 16),
+        (16, 32, 16),
+        (64, 64, 64),
+    ],
+)
+def test_matmul_bf16(M, K, N):
+    a = torch.randn((M, K), dtype=torch.bfloat16, device="cuda")
+    b = torch.randn((K, N), dtype=torch.bfloat16, device="cuda")
+    out = matmul_bf16(a, b).to(torch.bfloat16)
+    expected = torch.matmul(a, b)
+    torch.testing.assert_close(out, expected, rtol=0, atol=0)
+
+
+@pytest.mark.parametrize(
+    "M, K, N",
+    [
+        (16, 16, 16),
+        (32, 16, 16),
+        (16, 32, 16),
+        (64, 64, 64),
+    ],
+)
+def test_matmul_f16(M, K, N):
+    a = torch.randn((M, K), dtype=torch.float16, device="cuda")
+    b = torch.randn((K, N), dtype=torch.float16, device="cuda")
+    out = matmul_f16(a, b).to(torch.float16)
+    expected = torch.matmul(a, b)
+    torch.testing.assert_close(out, expected, rtol=0, atol=0)
